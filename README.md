@@ -21,7 +21,7 @@ recall ─▶ planner* ─▶ compile_plan ─▶ execute_plan ─▶ synthesize
 ```bash
 pip install -e ".[dev,llms]"
 cp .env.example .env            # add GOOGLE_API_KEY (or Vertex settings)
-python -m pytest                # 31 offline tests: scripted models, LiteLLM mocks, mock APIs
+python -m pytest                # 38 offline tests: scripted models, LiteLLM mocks, mock APIs, a local MCP server
 
 # Option 1: CLI with persistent memory
 python scripts/run_cli.py --user srini
@@ -247,6 +247,20 @@ scripts/              run_cli.py, improve.py, ingest.py, generate_doc_examples.p
 docs/ + mkdocs.yml    documentation site (published to GitHub Pages by .github/workflows/docs.yml)
 examples/             sop_travel_cards.md (procedure + term cards)
 tests/                offline end-to-end and unit tests
+```
+
+## MCP procedures, LLM steps and approvals
+
+Procedure steps can call any MCP tool (local stdio or remote HTTP) and run LLM prompts. Steps with
+`Side effect: write` are parked with an exact preview until you approve them. See
+`packs/techintel/` for a working pack (the Signal intelligence platform) and the docs pages
+*MCP & LLM steps in procedures* and *Actions & approvals*.
+
+```bash
+cp packs/techintel/mcp_servers.json.example mcp_servers.json
+python scripts/ingest.py packs/techintel/procedures.md --apply
+python scripts/run_procedure.py techintel_brief --user srini
+python scripts/approve.py --list
 ```
 
 ## Documentation

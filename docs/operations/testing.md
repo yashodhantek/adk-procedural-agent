@@ -1,7 +1,7 @@
 # Testing
 
 ```bash
-python -m pytest -q        # 31 tests, offline, about 10 s
+python -m pytest -q        # 38 tests, offline, about 10 s
 ```
 
 | File | Covers |
@@ -10,6 +10,7 @@ python -m pytest -q        # 31 tests, offline, about 10 s
 | `tests/test_e2e.py` | Full workflow: tool call, revise loop, induction, Reflexion, semantic + `user:` memory, plan cache, episodic memory, artifacts; reuse → promotion; re-plan; partial failure is not learned |
 | `tests/test_ingest.py` | Glossary resolution and normalisation, term merging; card pipeline end to end (canonicalisation, verified call, confirmed/review edges, apply, composite run); free-text resolution, dedupe, cycle rejection; blocked hosts and undeclared inputs |
 | `tests/test_llm.py` | Spec parsing for every provider, model types, `FallbackLlm`, `complete_json` fallback via LiteLLM, **full workflow on LiteLLM models** |
+| `tests/test_mcp_procedures.py` | A **real local stdio MCP server**: cards → MCP/LLM/write procedures, live verification during ingestion, parallel run, parked write with exact preview, wrong-user / repeat / expired approvals, the approve tool needing the user's own words, dependents waiting, unconfigured servers blocked, writes never learned |
 | `tests/test_features.py` | Reasoning resolution and parameters, per-role agents (BuiltIn / PlanReAct / effort), stable cacheable prefix + cache key, every search provider, `auto` selection, OpenAI search, PlanReAct answer extraction |
 
 ## Test doubles

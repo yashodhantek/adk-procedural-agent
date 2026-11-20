@@ -9,6 +9,26 @@ python scripts/run_cli.py [--user ID] [--session ID]
 Uses persistent services (`build_services()`). In-chat commands: `/graph` prints the Mermaid
 graph; `/learned` prints the last learning report. Ctrl-D quits.
 
+In-chat approvals: `/pending`, `/approve CODE`, `/reject CODE`.
+
+## `scripts/run_procedure.py`: run one procedure
+
+```bash
+python scripts/run_procedure.py techintel_brief --user srini
+python scripts/run_procedure.py get_weather_forecast city=Hyderabad --json
+```
+
+Compiles the procedure with its dependencies and runs it with no chat loop, which suits cron or
+launchd. Write steps are parked and their approval code is printed.
+
+## `scripts/approve.py`: decide on parked actions
+
+```bash
+python scripts/approve.py --list [--user ID]
+python scripts/approve.py CODE [--user ID]
+python scripts/approve.py CODE --reject
+```
+
 ## `scripts/ingest.py`: documents → graph
 
 ```bash

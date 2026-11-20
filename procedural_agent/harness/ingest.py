@@ -44,6 +44,11 @@ class DraftCall(BaseModel):
   extract: list[KV] = Field(default_factory=list, description="output name -> JSON path like results.0.lat")
   required: list[str] = Field(default_factory=list)
   expr: str = Field(default="", description="Arithmetic over inputs if the step is a calculation")
+  mcp: str = Field(default="", description="MCP tool as server.tool, if the step calls an MCP server")
+  args: list[KV] = Field(default_factory=list, description="MCP tool arguments; values may use {input}")
+  prompt: str = Field(default="", description="LLM instruction if the step summarises/classifies/drafts; may use {input}")
+  side_effect: Literal["read", "write", "destructive"] = Field(
+      default="read", description="write = changes something (needs approval); destructive = deletes/sends")
 
 
 class DraftDependency(BaseModel):
@@ -80,8 +85,8 @@ class Extraction(BaseModel):
 
 
 # ---------------------------------------------------------------- extractors
-_FIELD = re.compile(r"^(description|domain|inputs|outputs|needs|made of|api|extract|required|sample|"
-                    r"compute|kind|aliases|definition|applies to|related|steps)\s*:\s*(.*)$", re.I)
+_FIELD = re.compile(r"^(description|domain|inputs|outputs|needs|made of|api|mcp|llm|side effect|extract|"
+                    r"required|sample|compute|kind|aliases|definition|applies to|related|steps)\s*:\s*(.*)$", re.I)
 
 
 def _split_list(text: str) -> list[str]:
@@ -152,8 +157,20 @@ class CardExtractor:
                   for k, v in parse_qsl(parsed.query, keep_blank_values=True)]
         call = DraftCall(url=base, params=params, extract=_pairs(fields.get("extract", "")),
                          required=_split_list(fields.get("required", "")))
+      elif mcp_line := fields.get("mcp"):
+        import shlex
+        tokens = shlex.split(mcp_line)
+        args = [KV(name=k, value=v) for k, _, v in (t.partition("=") for t in tokens[1:]) if _ == "="]
+        call = DraftCall(mcp=tokens[0], args=args, extract=_pairs(fields.get("extract", "")),
+                         required=_split_list(fields.get("required", "")))
       elif expr := fields.get("compute"):
         call = DraftCall(expr=expr, required=[])
+      elif prompt := fields.get("llm"):
+        call = DraftCall(prompt=prompt)
+      side = (fields.get("side effect") or "read").split()[0].lower()
+      if side in ("write", "destructive"):
+        call = call or DraftCall()
+        call.side_effect = side
       deps = []
       for d in _split_list(fields.get("needs", "")):
         dm = re.match(r"([^()]+)\(([^)]*)\)", d)
@@ -186,7 +203,9 @@ class LlmExtractor:
         "- inputs/outputs are parameter names; reuse KNOWN PARAMETERS where the meaning matches.\n"
         "- depends_on: tasks that must happen first ('after X', 'using the result of X'); prefer "
         "KNOWN PROCEDURES names. relation=made_of when the task is a bundle of other tasks.\n"
-        "- call: only if the text names an API endpoint or a formula; put {input} placeholders in it.\n"
+        "- call: only if the text names an API endpoint, an MCP tool (call.mcp = server.tool, with args), "
+        "a formula, or a summarise/draft step (call.prompt); put {input} placeholders in it.\n"
+        "- call.side_effect: write if the step creates/changes/sends something, destructive if it deletes; else read.\n"
         "- Do not invent endpoints or facts that are not in the text. Quote evidence briefly.\n"
         "- terms: domain vocabulary, synonyms, codes and their meanings.\n\n"
         f"KNOWN PROCEDURES: {ctx.get('procedures', [])}\nKNOWN PARAMETERS: {ctx.get('parameters', [])}\n\n"
@@ -260,7 +279,7 @@ class Ingestor:
           rename[io] = c
       inputs = list(dict.fromkeys(canon(i) for i in d.inputs))
       outputs = list(dict.fromkeys(canon(o) for o in d.outputs))
-      call = self._call_spec(d.call, rename)
+      call = self._call_spec(d.call, rename, outputs=[canon(o) for o in d.outputs])
       if call is None and any(x.relation == "made_of" for x in d.depends_on):
         call = {"kind": "composite"}
       action, target = self._dedupe(name, d.description, inputs, outputs)
@@ -277,7 +296,13 @@ class Ingestor:
 
     edges = self._infer_edges(by_final, canon, warnings)
     for p in by_final.values():
-      p["call_check"], p["call"] = await self._check_call(p)
+      upstream = set()
+      for e in edges:
+        if e["src"] == p["name"] and e["status"] != "rejected":
+          dst = by_final.get(e["dst"]) or {}
+          kgp = self.mem.kg.get(e["dst"])
+          upstream |= set(dst.get("outputs", []) or (kgp.outputs if kgp else []))
+      p["call_check"], p["call"] = await self._check_call(p, upstream)
     report = {
         "batch_id": uuid.uuid4().hex[:10], "source": source, "created_at": now(),
         "procedures": [{k: v for k, v in p.items() if k != "deps"} for p in by_final.values()],
@@ -287,14 +312,26 @@ class Ingestor:
                            (report["batch_id"], source, "staged", report["created_at"], json.dumps(report)))
     return report
 
-  def _call_spec(self, call: DraftCall | None, rename: dict[str, str]) -> dict | None:
+  def _call_spec(self, call: DraftCall | None, rename: dict[str, str], outputs: list[str] | None = None) -> dict | None:
     if call is None:
       return None
+    spec = self._call_kind(call, rename, outputs or [])
+    if spec is not None and call.side_effect != "read":
+      spec["side_effect"] = call.side_effect
+    return spec
+
+  def _call_kind(self, call: DraftCall, rename: dict[str, str], outputs: list[str]) -> dict | None:
 
     def fix(s: str) -> str:
       for old, new in rename.items():
         s = s.replace("{" + old + "}", "{" + new + "}")
       return s
+    if call.mcp:
+      server, _, tool = call.mcp.partition(".")
+      return {"kind": "mcp_tool", "server": server, "tool": tool,
+              "args": {kv.name: fix(kv.value) for kv in call.args},
+              **({"extract": {rename.get(kv.name, kv.name): fix(kv.value) for kv in call.extract}} if call.extract else {}),
+              "required": [rename.get(r, r) for r in call.required]}
     if call.url:
       host = urlparse(call.url).hostname or ""
       return {"kind": "http_json", "source": host, "url": fix(call.url),
@@ -309,6 +346,8 @@ class Ingestor:
       for old, new in rename.items():
         expr = re.sub(rf"\b{re.escape(old)}\b", new, expr)
       return {"kind": "compute", "expr": expr, "output": rename.get(out, out)}
+    if call.prompt:
+      return {"kind": "llm", "prompt": fix(call.prompt), "output": outputs[0] if outputs else "text"}
     return None
 
   def _dedupe(self, name, description, inputs, outputs) -> tuple[str, str | None]:
@@ -413,15 +452,24 @@ class Ingestor:
       elif e["status"] in ("confirmed", "review"):
         graph[e["src"]].add(e["dst"])
 
-  async def _check_call(self, p: dict) -> tuple[str, dict | None]:
+  async def _check_call(self, p: dict, upstream: set | None = None) -> tuple[str, dict | None]:
     call = p["call"]
     if not call:
       return "none", None
     if call["kind"] == "composite":
       return "composite", call
-    missing = template_vars(call) - set(p["inputs"])
+    missing = template_vars(call) - set(p["inputs"]) - (upstream or set())
     if missing:
       return f"invalid: uses undeclared inputs {sorted(missing)}", None
+    if call["kind"] == "mcp_tool":
+      from .mcp_client import registry
+      if not registry().configured(call["server"]):
+        return f"blocked: MCP server '{call['server']}' is not configured (MCP_SERVERS_FILE)", None
+    side = call.get("side_effect", "read")
+    if side != "read":
+      return f"{side}: not test-run (runs only after approval)", call
+    if call["kind"] == "llm":
+      return "llm step", call
     if call["kind"] == "http_json":
       host = urlparse(call["url"]).hostname or ""
       if "*" not in settings.http_allowlist and host not in settings.http_allowlist:
@@ -463,11 +511,12 @@ class Ingestor:
           name=p["name"], description=p["description"], domain=p["domain"], inputs=p["inputs"],
           outputs=p["outputs"], steps_md=p["steps_md"], call=p["call"] or (old.call if old else None),
           status=old.status if old else "candidate", origin=old.origin if old else "ingested"))
-      if p["call"] and p["call"]["kind"] == "http_json" and not kg.db.query(
-          "SELECT 1 FROM sources WHERE name=?", (p["call"]["source"],)):
-        kg.upsert_source(p["call"]["source"], "http_json", p["call"]["url"], f"ingested from {report['source']}")
-      if p["call"] and p["call"]["kind"] == "http_json":
-        kg.add_edge(p["name"], p["call"]["source"], "USES_SOURCE")
+      kind = (p["call"] or {}).get("kind")
+      if kind in ("http_json", "mcp_tool"):
+        src = p["call"]["source"] if kind == "http_json" else f"mcp:{p['call']['server']}"
+        if not kg.db.query("SELECT 1 FROM sources WHERE name=?", (src,)):
+          kg.upsert_source(src, kind, p["call"].get("url", ""), f"ingested from {report['source']}")
+        kg.add_edge(p["name"], src, "USES_SOURCE")
       summary["procedures_updated" if old else "procedures_new"].append(p["name"])
     approved = set(approve) if isinstance(approve, list) else set()
     for e in report["edges"]:
@@ -494,7 +543,9 @@ def _default_llm():
 def render_report(r: dict) -> str:
   lines = [f"Batch {r['batch_id']} from {r['source']}:"]
   for p in r["procedures"]:
-    lines.append(f"  [{p['action']}] {p['name']}  in={p['inputs']} out={p['outputs']}  call: {p['call_check']}")
+    side = (p.get("call") or {}).get("side_effect")
+    lines.append(f"  [{p['action']}] {p['name']}  in={p['inputs']} out={p['outputs']}  call: {p['call_check']}"
+                 + (f"  ⚠ side effect: {side}" if side else ""))
     if p.get("renamed"):
       lines.append(f"        renamed via glossary: {p['renamed']}")
   for e in r["edges"]:

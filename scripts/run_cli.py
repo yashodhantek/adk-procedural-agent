@@ -2,7 +2,8 @@
 
   python scripts/run_cli.py --user srini            # new session
   python scripts/run_cli.py --user srini --session my-trip   # resume one
-Type /graph to print the procedure graph, /learned for the last learning report.
+Type /graph to print the procedure graph, /learned for the last learning report,
+/pending to list actions waiting for approval, /approve CODE or /reject CODE to decide.
 """
 
 from __future__ import annotations
@@ -40,6 +41,22 @@ async def main(user: str, session: str) -> None:
       continue
     if text == "/graph":
       print(agent_memory().kg.to_mermaid())
+      continue
+    if text == "/pending":
+      for a in agent_memory().approvals.pending(user):
+        print(f"  {a['code']}  [{a['side_effect']}]  {a['summary']}")
+      continue
+    if text.startswith(("/approve ", "/reject ")):
+      cmd, code = text.split(maxsplit=1)
+      if cmd == "/reject":
+        agent_memory().approvals.decide(code, "rejected")
+        print(f"  rejected {code}")
+      else:
+        from procedural_agent.harness.executor import execute_approved
+        try:
+          print(" ", await execute_approved(code, user))
+        except (KeyError, ValueError, PermissionError) as e:
+          print(f"  {e}")
       continue
     if text == "/learned":
       s = await sessions.get_session(app_name=app.name, user_id=user, session_id=session)

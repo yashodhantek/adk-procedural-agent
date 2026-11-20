@@ -36,3 +36,4 @@ local; with live APIs you'll see real network times.
 | 8 | [Learning a procedure over four turns](learning.md) | Induction → plan cache → reuse → promotion |
 | 9 | [Ingesting an SOP](ingestion.md) | Review report, approvals, apply, then running the new composite |
 | 10 | [Mixing model providers](providers.md) | How specs resolve to providers, reasoning and cache parameters |
+| 11 | [Signal brief through MCP (live)](signal.md) | A local MCP server, parallel MCP steps, an LLM step, a parked write, approval (run against a live local Signal) |

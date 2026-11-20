@@ -84,5 +84,5 @@ flowchart LR
 | **Language** | Python 3.11+ |
 | **Storage** | SQLite with FTS5 (local) · Agent Engine sessions + Memory Bank + GCS (production) |
 | **Models** | Native Gemini, plus everything LiteLLM supports |
-| **Tests** | 31 offline tests (scripted models, LiteLLM mocks, mock APIs) |
+| **Tests** | 38 offline tests (scripted models, LiteLLM mocks, mock APIs) |
 | **Repository** | [github.com/yashodhantek/adk-procedural-agent](https://github.com/yashodhantek/adk-procedural-agent) |

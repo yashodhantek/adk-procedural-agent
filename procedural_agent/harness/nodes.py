@@ -63,6 +63,11 @@ def _synth_prompt(state, feedback: str = "") -> str:
                                           "outputs": compact(v["outputs"]), "error": v["error"]}
                                       for k, v in results.items()}, indent=1, default=str),
   ]
+  pending = [v for v in results.values() if v["status"] == "pending_approval"]
+  if pending:
+    parts.append("ACTIONS WAITING FOR THE USER'S APPROVAL (not executed):\n" + "\n".join(
+        f"- code {v['outputs']['approval_code']} ({v['outputs']['side_effect']}): {v['outputs']['preview']}"
+        for v in pending))
   if state.get("temp:results_artifact"):
     parts.append(f"(Full raw results saved as artifact {state['temp:results_artifact']}.)")
   if feedback:
@@ -144,7 +149,7 @@ def compile_plan(ctx: Context, node_input: dict) -> dict:
 async def execute_plan(ctx: Context, node_input: dict) -> str:
   kg = agent_memory().kg
   compiled = ctx.state["temp:compiled"]
-  results = await run_plan(kg, compiled)
+  results = await run_plan(kg, compiled, context={"user_id": ctx.user_id, "session_id": ctx.session.id})
   ctx.state["temp:results"] = results
   try:   # artifact memory: the full payloads, versioned per session
     name = "plan_results.json"
@@ -234,9 +239,13 @@ async def learn(ctx: Context, node_input) -> None:
         learned["deprecated"] = name
 
     # 3. AWM-style induction of a new composite procedure
+    def _reads_only(name: str) -> bool:
+      p = mem.kg.get(name)
+      return not (p and p.call and p.call.get("side_effect", "read") != "read")
+    # Composites are learned only from read-only steps: a write always needs its own approval.
     roots = sorted({s["procedure"] for s in compiled.get("steps", {}).values()
                     if s["procedure"] != "adhoc" and not s["id"].startswith(("auto_",))
-                    and not mem.kg.parts(s["procedure"])})
+                    and not mem.kg.parts(s["procedure"]) and _reads_only(s["procedure"])})
     root_steps = [sid for sid, s in compiled.get("steps", {}).items() if s["procedure"] in roots]
     all_roots_ok = all((results.get(sid) or {}).get("ok") for sid in root_steps)
     # Only a run where every chosen procedure actually worked becomes a new procedure.

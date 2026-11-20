@@ -12,27 +12,26 @@ them fast and their structured output reliable. Full signatures are in the
 | Memory | `remember_fact`, `recall_facts`, `forget_fact`, `load_memory` |
 | Glossary | `define_term`, `lookup_term` |
 | Ingestion | `ingest_text`, `apply_ingest` |
+| Approvals | `approve_action`, `reject_action`, `list_pending_actions` |
 | Data | `http_get_json` (allow-listed), `load_web_page`, `web_search` / Google Search |
 | MCP | every tool from every server in `MCP_SERVERS` |
 
 ## MCP servers
 
-```bash title=".env"
-MCP_SERVERS=[{"name": "atlassian", "url": "https://mcp.atlassian.com/v2/mcp",
-              "headers": {"Authorization": "Bearer <token>"}}]
-```
+Configure local (stdio) and remote (streamable HTTP) servers in `mcp_servers.json` or `MCP_SERVERS`.
+Each server becomes:
 
-Each entry becomes an ADK `McpToolset` (streamable HTTP) with:
+1. an ADK `McpToolset` for the synthesizer, with tool names prefixed by the server name and the
+   tool list cached for 5 minutes, and
+2. a data source that **procedure steps** can call (`MCP: server.tool …`).
 
-- tool names prefixed by `name`
-- the tool list cached for 5 minutes
+Details are in [MCP & LLM steps in procedures](mcp-procedures.md). A server that fails to load
+is skipped with a warning.
 
-A server that fails to load is skipped with a warning. The agent still starts.
-
-**Example: Jira via Atlassian's Rovo MCP server.** The synthesizer can search and update Jira
-directly. For questions people ask often, also write procedures that call the Jira REST API, so
-they run deterministically and in parallel. See the [Roadmap](../roadmap.md) for first-class
-`mcp_tool` procedures.
+**Example: Jira via Atlassian's Rovo MCP server.** Add `{"name": "atlassian", "url":
+"https://mcp.atlassian.com/v2/mcp", "headers": {...}}`, then write cards such as
+`MCP: atlassian.searchJiraIssuesUsingJql jql="assignee = currentUser()"`. Write tools (create or
+transition issues) get `Side effect: write`, so they need [approval](actions-approvals.md).
 
 ## Teaching a procedure in chat
 

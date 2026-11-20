@@ -10,6 +10,7 @@
 | Unreviewed knowledge | Ingestion is staged; I/O-inferred edges need approval; new procedures start as candidates | `ingest.py` |
 | Bad learned procedures | Evidence gates; promotion threshold; automatic retirement; consolidation | `nodes.learn`, `improve.py` |
 | Graph corruption | Cycle checks on every edge and at compile time | `procedural_kg.py` |
+| Unapproved writes | `Side effect: write/destructive` steps are parked; approval requires the user's own words, the same user, a TTL and single use | `executor`, `memory/approvals.py` |
 | Tool-call tampering | Optional HMAC integrity (`TOOL_CALL_HMAC_KEY`) | ADK `ToolCallIntegrityPlugin` |
 | Secrets in memory | Credentials come from the environment and are never stored in the graph; `describe()` masks keys | `llm.py` |
 | Prompt regressions | Optimised prompts are activated only when they beat the baseline; one-command rollback | `improve.py`, `prompts/__init__.py` |
@@ -24,6 +25,8 @@ TOOL_CALL_HMAC_KEY=<random 32+ bytes>
 ENABLE_TRACING=1
 ```
 
-Write actions, such as creating tickets or sending messages through MCP, should require explicit
-user confirmation. That's a planned procedure flag (`side_effect: write`); see the
-[Roadmap](../roadmap.md).
+Procedure steps that write, such as creating tickets, saving files or sending messages through
+MCP, are declared with `Side effect: write` or `destructive`. They are parked with an exact
+preview and run only after the user approves. See [Actions & approvals](actions-approvals.md).
+Ad-hoc MCP tools called directly by the synthesizer aren't gated this way, so expose write-capable
+servers through procedures, or limit their tools at the server or gateway.

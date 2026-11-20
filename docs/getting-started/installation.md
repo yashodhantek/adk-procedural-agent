@@ -29,7 +29,7 @@ cp .env.example .env              # then edit .env
 
 ```bash
 python -m pytest -q
-# 31 passed
+# 38 passed
 ```
 
 The tests drive the real ADK 2.x workflow end to end with a scripted model and mock HTTP APIs, so
@@ -51,6 +51,6 @@ synthesizer_lab/    target agent for the GEPA optimiser + eval set
 evals/              eval criteria, sampler and optimiser configs
 examples/           sop_travel_cards.md
 scripts/            run_cli.py, ingest.py, improve.py, generate_doc_examples.py
-tests/              31 offline tests
+tests/              38 offline tests
 docs/               this site
 ```

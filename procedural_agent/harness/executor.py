@@ -160,7 +160,7 @@ def _step_vars(kg: ProceduralKG, step: dict, results: dict[str, dict]) -> dict[s
   return variables
 
 
-async def run_step(kg: ProceduralKG, step: dict, results: dict[str, dict]) -> dict:
+async def run_step(kg: ProceduralKG, step: dict, results: dict[str, dict], context: dict | None = None) -> dict:
   started = time.perf_counter()
   proc_name = step["procedure"]
   out = {"id": step["id"], "procedure": proc_name, "ok": False, "status": "failed",
@@ -174,14 +174,30 @@ async def run_step(kg: ProceduralKG, step: dict, results: dict[str, dict]) -> di
     return out
   failed_deps = [d for d in step.get("depends_on", []) if not (results.get(d) or {}).get("ok")]
   if failed_deps:
-    out.update(status="skipped", error=f"Upstream steps failed: {failed_deps}")
+    waiting = [d for d in failed_deps if (results.get(d) or {}).get("status") == "pending_approval"]
+    out.update(status="skipped", error=(f"Waiting for approval of {waiting}" if waiting
+                                        else f"Upstream steps failed: {failed_deps}"))
     return out
 
   call = proc.call
   variables = _step_vars(kg, step, results)
-  out["source"] = call.get("source")
+  upstream = [(results.get(d) or {}).get("outputs") or {} for d in step.get("depends_on", [])]
+  variables.setdefault("upstream", {k: v for u in upstream for k, v in u.items()})
+  out["source"] = call.get("source") or (f"mcp:{call['server']}" if call.get("kind") == "mcp_tool" else None)
+  side_effect = call.get("side_effect", "read")
   try:
-    upstream = [(results.get(d) or {}).get("outputs") or {} for d in step.get("depends_on", [])]
+    if side_effect in ("write", "destructive") and not step.get("approved"):
+      # Never run a write during planning: render the exact call and park it for a human yes.
+      rendered = render_call(call, variables)
+      from ..memory import agent_memory
+      summary = describe_call(proc_name, rendered)
+      code = agent_memory().approvals.create(proc_name, side_effect, rendered, summary,
+                                             user_id=(context or {}).get("user_id"),
+                                             session_id=(context or {}).get("session_id"))
+      out.update(status="pending_approval", error=None,
+                 outputs={"approval_code": code, "side_effect": side_effect, "preview": summary})
+      out["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
+      return out
     out.update(ok=True, status="ok", outputs=await execute_call(call, variables, upstream))
   except KeyError as e:
     out["error"] = f"Missing input {e.args[0]!r} for {proc_name}"
@@ -191,12 +207,70 @@ async def run_step(kg: ProceduralKG, step: dict, results: dict[str, dict]) -> di
   return out
 
 
-async def execute_call(call: dict, variables: dict[str, Any], upstream: list[dict] | None = None) -> dict:
-  """Run one call spec. Raises KeyError for a missing input, other errors on failure."""
+def render_text(template: str, variables: dict[str, Any]) -> str:
+  """Fill {var} in prose (LLM prompts); dicts and lists become compact JSON."""
+  def sub(m):
+    if m.group(1) not in variables:
+      raise KeyError(m.group(1))
+    v = variables[m.group(1)]
+    return v if isinstance(v, str) else json.dumps(compact(v, 10, 600), ensure_ascii=False, default=str)
+  return _VAR.sub(sub, template)
+
+
+def render_call(call: dict, variables: dict[str, Any]) -> dict:
+  """The call with every template filled in (used for approval previews and replay)."""
+  out = dict(call)
   kind = call.get("kind")
-  if kind == "http_json":
-    url = render(call["url"], variables)
-    params = {k: render(v, variables) for k, v in call.get("params", {}).items()}
+  if kind == "mcp_tool":
+    out["args"] = {k: coerce(render(v, variables)) for k, v in call.get("args", {}).items()}
+  elif kind == "http_json":
+    out["url"] = render(call["url"], variables)
+    out["params"] = {k: render(v, variables) for k, v in call.get("params", {}).items()}
+  elif kind == "llm":
+    out["prompt"] = render_text(call["prompt"], variables)
+  out["prerendered"] = True
+  return out
+
+
+def describe_call(procedure: str, rendered: dict) -> str:
+  if rendered.get("kind") == "mcp_tool":
+    args = {k: (v if len(str(v)) <= 160 else str(v)[:157] + "…") for k, v in rendered.get("args", {}).items()}
+    return f"{procedure}: {rendered['server']}.{rendered['tool']}({json.dumps(args, ensure_ascii=False, default=str)})"
+  if rendered.get("kind") == "http_json":
+    return f"{procedure}: GET {rendered['url']} {rendered.get('params')}"
+  return f"{procedure}: {rendered.get('kind')}"
+
+
+async def _llm_text(spec: str, prompt: str) -> str:
+  from .. import llm
+  return await llm.complete_text(spec, prompt)
+
+
+llm_text = _llm_text   # tests replace this
+
+
+async def execute_call(call: dict, variables: dict[str, Any], upstream: list[dict] | None = None) -> dict:
+  """Run one call spec. Raises KeyError for a missing input, other errors on failure.
+
+  A call from render_call() (prerendered=True) is replayed exactly, with no templating."""
+  kind = call.get("kind")
+  pre = call.get("prerendered", False)
+  if kind == "mcp_tool":
+    from .mcp_client import registry
+    args = call.get("args", {}) if pre else {k: coerce(render(v, variables)) for k, v in call.get("args", {}).items()}
+    data = await asyncio.wait_for(registry().call(call["server"], call["tool"], args),
+                                  timeout=settings.step_timeout_s * 3)
+    if call.get("extract"):
+      outputs = {name: extract(data, render(path, variables) if not pre else path)
+                 for name, path in call["extract"].items()}
+    else:
+      outputs = data if isinstance(data, dict) else {"result": data}
+  elif kind == "llm":
+    prompt = call["prompt"] if pre else render_text(call["prompt"], variables)
+    outputs = {call.get("output", "text"): await llm_text(settings.llm_step_model, prompt)}
+  elif kind == "http_json":
+    url = call["url"] if pre else render(call["url"], variables)
+    params = call.get("params", {}) if pre else {k: render(v, variables) for k, v in call.get("params", {}).items()}
     data = await asyncio.wait_for(fetcher.get_json(url, params), timeout=settings.step_timeout_s * 3)
     outputs = {name: extract(data, render(path, variables)) for name, path in call.get("extract", {}).items()}
   elif kind == "compute":
@@ -218,19 +292,41 @@ def template_vars(call: dict) -> set[str]:
   found: set[str] = set()
   for text in [call.get("url", "")] + list(call.get("params", {}).values()) + list(call.get("extract", {}).values()):
     found |= set(_VAR.findall(str(text)))
+  if call.get("kind") == "mcp_tool":
+    for v in call.get("args", {}).values():
+      found |= set(_VAR.findall(str(v)))
+  if call.get("kind") == "llm":
+    found |= set(_VAR.findall(call.get("prompt", ""))) - {"upstream"}
   if call.get("kind") == "compute" and call.get("expr"):
     found |= {n.id for n in ast.walk(ast.parse(call["expr"], mode="eval"))
               if isinstance(n, ast.Name) and n.id not in _FUNCS}
   return found
 
 
-async def run_plan(kg: ProceduralKG, compiled: dict, record: bool = True) -> dict[str, dict]:
+async def execute_approved(code: str, user_id: str | None = None) -> dict:
+  """Run a parked write exactly as it was previewed."""
+  from ..memory import agent_memory
+  mem = agent_memory()
+  action = mem.approvals.check(code, settings.approval_ttl_hours, user_id)
+  started = time.perf_counter()
+  try:
+    outputs = await execute_call(action["call"], {}, [])
+  except Exception as e:  # noqa: BLE001
+    mem.approvals.decide(code, "failed", {"error": str(e)})
+    mem.kg.record_outcome(action["procedure"], False, (time.perf_counter() - started) * 1000)
+    return {"ok": False, "code": code, "procedure": action["procedure"], "error": f"{type(e).__name__}: {e}"}
+  mem.approvals.decide(code, "executed", outputs)
+  mem.kg.record_outcome(action["procedure"], True, (time.perf_counter() - started) * 1000)
+  return {"ok": True, "code": code, "procedure": action["procedure"], "outputs": compact(outputs)}
+
+
+async def run_plan(kg: ProceduralKG, compiled: dict, record: bool = True, context: dict | None = None) -> dict[str, dict]:
   results: dict[str, dict] = {}
   sem = asyncio.Semaphore(settings.max_parallel_steps)
 
   async def guarded(step):
     async with sem:
-      return await run_step(kg, step, results)
+      return await run_step(kg, step, results, context)
 
   for level in compiled["levels"]:
     outs = await asyncio.gather(*(guarded(compiled["steps"][sid]) for sid in level))
