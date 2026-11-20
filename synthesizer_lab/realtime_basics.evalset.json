@@ -1,0 +1,103 @@
+{
+  "eval_set_id": "realtime_basics",
+  "name": "realtime_basics",
+  "description": "Single, dependent, independent and composite procedure questions",
+  "eval_cases": [
+    {
+      "evalId": "weather_single",
+      "conversation": [
+        {
+          "invocationId": "weather_single-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "What's the weather in Hyderabad right now?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "evalId": "fx_dependent",
+      "conversation": [
+        {
+          "invocationId": "fx_dependent-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Convert 250 EUR to INR at today's rate."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "evalId": "multi_independent",
+      "conversation": [
+        {
+          "invocationId": "multi_independent-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Give me the air quality in Delhi and the price of bitcoin in INR."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "evalId": "composite",
+      "conversation": [
+        {
+          "invocationId": "composite-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Is it a good day to go for a run in Bengaluru?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "evalId": "multi_dependent",
+      "conversation": [
+        {
+          "invocationId": "multi_dependent-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Any earthquakes near Kathmandu recently, and what's the weather there?"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "evalId": "missing_source",
+      "conversation": [
+        {
+          "invocationId": "missing_source-1",
+          "userContent": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "What's the current water level of Hussain Sagar lake?"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

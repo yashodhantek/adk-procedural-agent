@@ -1,0 +1,314 @@
+{
+  "parameters": [
+    {
+      "name": "latitude",
+      "aliases": [
+        "lat"
+      ],
+      "unit": "degrees",
+      "definition": "WGS84 latitude"
+    },
+    {
+      "name": "longitude",
+      "aliases": [
+        "lon",
+        "lng",
+        "long"
+      ],
+      "unit": "degrees",
+      "definition": "WGS84 longitude"
+    },
+    {
+      "name": "city",
+      "aliases": [
+        "place",
+        "location",
+        "town",
+        "city_name"
+      ],
+      "definition": "Place name to geocode"
+    },
+    {
+      "name": "from_currency",
+      "aliases": [
+        "base",
+        "base_currency",
+        "source_currency",
+        "from"
+      ],
+      "format": "upper",
+      "definition": "ISO-4217 code converted from"
+    },
+    {
+      "name": "to_currency",
+      "aliases": [
+        "target",
+        "target_currency",
+        "quote_currency",
+        "to"
+      ],
+      "format": "upper",
+      "definition": "ISO-4217 code converted to"
+    },
+    {
+      "name": "vs_currency",
+      "aliases": [
+        "fiat",
+        "price_currency"
+      ],
+      "format": "lower",
+      "definition": "Fiat currency for crypto prices (lower-case for CoinGecko)"
+    },
+    {
+      "name": "coin",
+      "aliases": [
+        "crypto",
+        "token",
+        "coin_id"
+      ],
+      "format": "lower",
+      "definition": "CoinGecko coin id"
+    },
+    {
+      "name": "amount",
+      "aliases": [
+        "value",
+        "sum",
+        "quantity"
+      ],
+      "definition": "Money amount"
+    },
+    {
+      "name": "rate",
+      "aliases": [
+        "fx_rate",
+        "exchange_rate"
+      ],
+      "definition": "Units of to_currency per 1 from_currency"
+    },
+    {
+      "name": "us_aqi",
+      "aliases": [
+        "aqi",
+        "air_quality_index"
+      ],
+      "definition": "US EPA air quality index"
+    },
+    {
+      "name": "timezone",
+      "aliases": [
+        "tz",
+        "time_zone"
+      ],
+      "definition": "IANA timezone"
+    }
+  ],
+  "values": [
+    {
+      "canonical": "INR",
+      "scope": [
+        "from_currency",
+        "to_currency",
+        "vs_currency"
+      ],
+      "aliases": [
+        "rupee",
+        "rupees",
+        "indian rupee",
+        "indian rupees",
+        "₹",
+        "rs",
+        "inr"
+      ]
+    },
+    {
+      "canonical": "USD",
+      "scope": [
+        "from_currency",
+        "to_currency",
+        "vs_currency"
+      ],
+      "aliases": [
+        "dollar",
+        "dollars",
+        "us dollar",
+        "us dollars",
+        "$",
+        "usd",
+        "bucks"
+      ]
+    },
+    {
+      "canonical": "EUR",
+      "scope": [
+        "from_currency",
+        "to_currency",
+        "vs_currency"
+      ],
+      "aliases": [
+        "euro",
+        "euros",
+        "€",
+        "eur"
+      ]
+    },
+    {
+      "canonical": "GBP",
+      "scope": [
+        "from_currency",
+        "to_currency",
+        "vs_currency"
+      ],
+      "aliases": [
+        "pound",
+        "pounds",
+        "sterling",
+        "£",
+        "gbp"
+      ]
+    },
+    {
+      "canonical": "JPY",
+      "scope": [
+        "from_currency",
+        "to_currency",
+        "vs_currency"
+      ],
+      "aliases": [
+        "yen",
+        "¥",
+        "jpy"
+      ]
+    },
+    {
+      "canonical": "bitcoin",
+      "scope": [
+        "coin"
+      ],
+      "aliases": [
+        "btc",
+        "bitcoin",
+        "bitcoins"
+      ]
+    },
+    {
+      "canonical": "ethereum",
+      "scope": [
+        "coin"
+      ],
+      "aliases": [
+        "eth",
+        "ether",
+        "ethereum"
+      ]
+    },
+    {
+      "canonical": "Bengaluru",
+      "scope": [
+        "city"
+      ],
+      "aliases": [
+        "bangalore",
+        "blr",
+        "bengaluru"
+      ]
+    },
+    {
+      "canonical": "Mumbai",
+      "scope": [
+        "city"
+      ],
+      "aliases": [
+        "bombay",
+        "mumbai"
+      ]
+    },
+    {
+      "canonical": "Hyderabad",
+      "scope": [
+        "city"
+      ],
+      "aliases": [
+        "hyd",
+        "hyderabad",
+        "cyberabad"
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "term": "AQI",
+      "aliases": [
+        "air quality",
+        "air quality index",
+        "pollution",
+        "smog"
+      ],
+      "domain": "environment",
+      "definition": "US AQI: 0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, 151-200 unhealthy, 201+ very unhealthy.",
+      "related_procedures": [
+        "get_air_quality"
+      ]
+    },
+    {
+      "term": "FX rate",
+      "aliases": [
+        "exchange rate",
+        "conversion rate",
+        "forex"
+      ],
+      "domain": "finance",
+      "definition": "ECB reference rate, published on working days around 16:00 CET; weekends show the last working day.",
+      "related_procedures": [
+        "get_fx_rate",
+        "convert_amount"
+      ]
+    },
+    {
+      "term": "good day outside",
+      "aliases": [
+        "go for a run",
+        "go out",
+        "outdoor",
+        "picnic",
+        "jog"
+      ],
+      "domain": "weather",
+      "definition": "Judge by temperature, rain probability and AQI together.",
+      "related_procedures": [
+        "city_conditions_brief"
+      ]
+    },
+    {
+      "term": "earthquake",
+      "aliases": [
+        "quake",
+        "quakes",
+        "tremor",
+        "tremors",
+        "seismic"
+      ],
+      "domain": "hazards",
+      "definition": "USGS events within 500 km in the last 30 days.",
+      "related_procedures": [
+        "get_recent_earthquakes"
+      ]
+    },
+    {
+      "term": "coordinates",
+      "aliases": [
+        "coordinates",
+        "lat long",
+        "lat/long",
+        "geo coordinates",
+        "geocode",
+        "location coordinates"
+      ],
+      "domain": "geo",
+      "definition": "Latitude/longitude pair for a place.",
+      "related_procedures": [
+        "geocode_city"
+      ]
+    }
+  ]
+}

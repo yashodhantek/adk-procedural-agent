@@ -1,0 +1,6 @@
+{
+  "optimizer_model": "gemini-3.1-pro",
+  "max_metric_calls": 60,
+  "reflection_minibatch_size": 3,
+  "run_dir": ".data/gepa_runs"
+}

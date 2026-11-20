@@ -1,0 +1,43 @@
+{
+  "criteria": {
+    "rubric_based_final_response_quality_v1": {
+      "threshold": 0.7,
+      "judge_model_options": {
+        "judge_model": "gemini-3.5-flash",
+        "num_samples": 1
+      },
+      "rubrics": [
+        {
+          "rubric_id": "grounded",
+          "rubric_content": {
+            "text_property": "Every number in the answer comes from a tool result, not invented."
+          }
+        },
+        {
+          "rubric_id": "complete",
+          "rubric_content": {
+            "text_property": "Every part of the user's question is answered."
+          }
+        },
+        {
+          "rubric_id": "dated",
+          "rubric_content": {
+            "text_property": "The answer states units and when the data was measured or published."
+          }
+        },
+        {
+          "rubric_id": "honest",
+          "rubric_content": {
+            "text_property": "If some data could not be fetched, the answer says so plainly."
+          }
+        }
+      ]
+    },
+    "hallucinations_v1": {
+      "threshold": 0.8,
+      "judge_model_options": {
+        "judge_model": "gemini-3.5-flash"
+      }
+    }
+  }
+}

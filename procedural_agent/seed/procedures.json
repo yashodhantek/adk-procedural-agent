@@ -1,0 +1,136 @@
+{
+  "sources": [
+    {"name": "open_meteo_geocoding", "kind": "http_json", "base_url": "https://geocoding-api.open-meteo.com", "description": "City name to coordinates (no key)"},
+    {"name": "open_meteo_forecast", "kind": "http_json", "base_url": "https://api.open-meteo.com", "description": "Current weather and 3-day forecast (no key)"},
+    {"name": "open_meteo_air", "kind": "http_json", "base_url": "https://air-quality-api.open-meteo.com", "description": "Air quality index (no key)"},
+    {"name": "frankfurter", "kind": "http_json", "base_url": "https://api.frankfurter.app", "description": "ECB reference FX rates (no key)"},
+    {"name": "usgs_earthquakes", "kind": "http_json", "base_url": "https://earthquake.usgs.gov", "description": "USGS earthquake feed (no key)"},
+    {"name": "coingecko", "kind": "http_json", "base_url": "https://api.coingecko.com", "description": "Crypto spot prices (no key, rate-limited)"}
+  ],
+  "procedures": [
+    {
+      "name": "geocode_city",
+      "domain": "geo",
+      "description": "Resolve a city or place name to latitude, longitude, country and timezone.",
+      "inputs": ["city"],
+      "outputs": ["latitude", "longitude", "country", "timezone", "resolved_name"],
+      "steps_md": "1. Call the Open-Meteo geocoding API with the city name.\n2. Take the first match.\n3. If nothing matches, ask the user to spell the place or add a country.",
+      "uses_source": "open_meteo_geocoding",
+      "call": {
+        "kind": "http_json", "source": "open_meteo_geocoding",
+        "url": "https://geocoding-api.open-meteo.com/v1/search",
+        "params": {"name": "{city}", "count": "1"},
+        "extract": {"latitude": "results.0.latitude", "longitude": "results.0.longitude",
+                    "country": "results.0.country", "timezone": "results.0.timezone",
+                    "resolved_name": "results.0.name"},
+        "required": ["latitude", "longitude"]
+      }
+    },
+    {
+      "name": "get_weather_forecast",
+      "domain": "weather",
+      "description": "Current weather (temperature, humidity, wind, rain) and a 3-day forecast for a city.",
+      "inputs": ["city", "latitude", "longitude"],
+      "outputs": ["current", "daily"],
+      "steps_md": "1. Geocode the city.\n2. Call Open-Meteo forecast with current and daily fields, timezone=auto.\n3. Report units (°C, km/h, mm).",
+      "depends_on": {"geocode_city": {"latitude": "latitude", "longitude": "longitude"}},
+      "uses_source": "open_meteo_forecast",
+      "call": {
+        "kind": "http_json", "source": "open_meteo_forecast",
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "params": {"latitude": "{latitude}", "longitude": "{longitude}", "timezone": "auto", "forecast_days": "3",
+                   "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation",
+                   "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max"},
+        "extract": {"current": "current", "daily": "daily"},
+        "required": ["current"]
+      }
+    },
+    {
+      "name": "get_air_quality",
+      "domain": "environment",
+      "description": "Current air quality (US AQI, PM2.5, PM10) for a city.",
+      "inputs": ["city", "latitude", "longitude"],
+      "outputs": ["us_aqi", "pm2_5", "pm10"],
+      "steps_md": "1. Geocode the city.\n2. Call Open-Meteo air-quality API.\n3. Interpret AQI bands (0-50 good, 51-100 moderate, 101-150 unhealthy for sensitive groups, >150 unhealthy).",
+      "depends_on": {"geocode_city": {"latitude": "latitude", "longitude": "longitude"}},
+      "uses_source": "open_meteo_air",
+      "call": {
+        "kind": "http_json", "source": "open_meteo_air",
+        "url": "https://air-quality-api.open-meteo.com/v1/air-quality",
+        "params": {"latitude": "{latitude}", "longitude": "{longitude}", "current": "us_aqi,pm2_5,pm10"},
+        "extract": {"us_aqi": "current.us_aqi", "pm2_5": "current.pm2_5", "pm10": "current.pm10"},
+        "required": ["us_aqi"]
+      }
+    },
+    {
+      "name": "get_fx_rate",
+      "domain": "finance",
+      "description": "Latest exchange rate between two currencies (ISO codes such as USD, INR, EUR).",
+      "inputs": ["from_currency", "to_currency"],
+      "outputs": ["rate", "date"],
+      "steps_md": "1. Normalise currency names to ISO-4217 codes.\n2. Call Frankfurter /latest.\n3. Note the rate date (ECB publishes on working days).",
+      "uses_source": "frankfurter",
+      "call": {
+        "kind": "http_json", "source": "frankfurter",
+        "url": "https://api.frankfurter.app/latest",
+        "params": {"from": "{from_currency}", "to": "{to_currency}"},
+        "extract": {"rate": "rates.{to_currency}", "date": "date"},
+        "required": ["rate"]
+      }
+    },
+    {
+      "name": "convert_amount",
+      "domain": "finance",
+      "description": "Convert an amount of money from one currency to another at the latest rate.",
+      "inputs": ["amount", "from_currency", "to_currency", "rate"],
+      "outputs": ["converted"],
+      "steps_md": "1. Get the FX rate.\n2. Multiply amount by rate.\n3. Round to 2 decimals and state the rate date.",
+      "depends_on": {"get_fx_rate": {"rate": "rate"}},
+      "call": {"kind": "compute", "expr": "round(amount * rate, 2)", "output": "converted"}
+    },
+    {
+      "name": "get_recent_earthquakes",
+      "domain": "hazards",
+      "description": "Recent earthquakes (last 30 days) within 500 km of a city, newest first.",
+      "inputs": ["city", "latitude", "longitude"],
+      "outputs": ["count", "events"],
+      "steps_md": "1. Geocode the city.\n2. Query the USGS feed by radius.\n3. Summarise magnitude, place and time.",
+      "depends_on": {"geocode_city": {"latitude": "latitude", "longitude": "longitude"}},
+      "uses_source": "usgs_earthquakes",
+      "call": {
+        "kind": "http_json", "source": "usgs_earthquakes",
+        "url": "https://earthquake.usgs.gov/fdsnws/event/1/query",
+        "params": {"format": "geojson", "latitude": "{latitude}", "longitude": "{longitude}",
+                   "maxradiuskm": "500", "orderby": "time", "limit": "5"},
+        "extract": {"count": "metadata.count", "events": "features[*].properties"},
+        "required": ["count"]
+      }
+    },
+    {
+      "name": "get_crypto_price",
+      "domain": "finance",
+      "description": "Spot price of a cryptocurrency (CoinGecko id, e.g. bitcoin, ethereum) in a fiat currency.",
+      "inputs": ["coin", "vs_currency"],
+      "outputs": ["price"],
+      "steps_md": "1. Map the coin name to its CoinGecko id (lower-case).\n2. Use a lower-case vs_currency such as usd or inr.",
+      "uses_source": "coingecko",
+      "call": {
+        "kind": "http_json", "source": "coingecko",
+        "url": "https://api.coingecko.com/api/v3/simple/price",
+        "params": {"ids": "{coin}", "vs_currencies": "{vs_currency}"},
+        "extract": {"price": "{coin}.{vs_currency}"},
+        "required": ["price"]
+      }
+    },
+    {
+      "name": "city_conditions_brief",
+      "domain": "weather",
+      "description": "Composite: weather plus air quality for a city, for 'is it a good day to go out' questions.",
+      "inputs": ["city"],
+      "outputs": ["current", "daily", "us_aqi"],
+      "steps_md": "Run get_weather_forecast and get_air_quality in parallel (both need geocode_city first), then give a go/no-go summary.",
+      "composed_of": ["get_weather_forecast", "get_air_quality"],
+      "call": {"kind": "composite"}
+    }
+  ]
+}
