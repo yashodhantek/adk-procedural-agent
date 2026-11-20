@@ -1,0 +1,140 @@
+site_name: ADK Procedural Agent
+site_description: Self-learning real-time data agent on Google ADK 2.x with a procedural-memory knowledge graph
+site_url: https://yashodhantek.github.io/adk-procedural-agent/
+repo_url: https://github.com/yashodhantek/adk-procedural-agent
+repo_name: yashodhantek/adk-procedural-agent
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 YashodhanTek
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep orange
+      toggle: {icon: material/weather-night, name: Switch to dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep orange
+      toggle: {icon: material/weather-sunny, name: Switch to light mode}
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - tables
+  - toc: {permalink: true}
+  - pymdownx.details
+  - pymdownx.highlight: {anchor_linenums: true}
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tasklist: {custom_checkbox: true}
+  - pymdownx.tabbed: {alternate_style: true}
+  - pymdownx.snippets: {base_path: [docs/snippets], check_paths: true}
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+exclude_docs: |
+  snippets/
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Configuration: getting-started/configuration.md
+  - Architecture:
+      - architecture/index.md
+      - High-level design: architecture/hld.md
+      - Request lifecycle: architecture/request-lifecycle.md
+      - "LLD: Workflow & nodes": architecture/lld-workflow.md
+      - "LLD: Procedural knowledge graph": architecture/lld-procedural-graph.md
+      - "LLD: DAG executor": architecture/lld-executor.md
+      - "LLD: Memory stores": architecture/lld-memory.md
+      - "LLD: Learning & improvement": architecture/lld-learning.md
+      - "LLD: Ingestion pipeline": architecture/lld-ingestion.md
+      - "LLD: Model provider layer": architecture/lld-models.md
+      - "LLD: Plugins & tools": architecture/lld-plugins.md
+  - Capabilities:
+      - capabilities/index.md
+      - Planning & dependencies: capabilities/planning.md
+      - Parallel execution: capabilities/parallel-execution.md
+      - Self-correction: capabilities/self-correction.md
+      - Procedural memory & skills: capabilities/procedural-memory.md
+      - Glossary: capabilities/glossary.md
+      - Memory (working, episodic, semantic, artifacts): capabilities/memory.md
+      - Context management: capabilities/context-management.md
+      - Reflection & playbook: capabilities/reflection.md
+      - Self-learning: capabilities/self-learning.md
+      - Self-improvement: capabilities/self-improvement.md
+      - Natural-language ingestion: capabilities/ingestion.md
+      - Multiple LLM providers: capabilities/multi-llm.md
+      - Reasoning: capabilities/reasoning.md
+      - Prompt caching: capabilities/prompt-caching.md
+      - Web search: capabilities/web-search.md
+      - Tools & MCP: capabilities/tools-mcp.md
+      - Guardrails & safety: capabilities/guardrails.md
+      - Observability & resumability: capabilities/observability.md
+  - Examples:
+      - examples/index.md
+      - 1. One procedure, one hidden dependency: examples/single.md
+      - 2. Dependent chain + glossary: examples/dependent.md
+      - 3. Independent needs in parallel: examples/parallel.md
+      - 4. Composite procedure: examples/composite.md
+      - 5. Critic asks for a revision: examples/revise.md
+      - 6. Critic triggers a re-plan: examples/replan.md
+      - 7. A data source is down: examples/failure.md
+      - 8. Learning a procedure over four turns: examples/learning.md
+      - 9. Ingesting an SOP: examples/ingestion.md
+      - 10. Mixing model providers: examples/providers.md
+  - Reference:
+      - reference/index.md
+      - Procedure cards: reference/procedure-cards.md
+      - Seed files: reference/seed-files.md
+      - Command line: reference/cli.md
+      - Tools: reference/tools.md
+      - Session state keys: reference/state-keys.md
+      - Database schema: reference/database.md
+      - Python API: reference/python-api.md
+  - Operations:
+      - operations/index.md
+      - Deployment: operations/deployment.md
+      - Evaluation & optimisation: operations/evaluation.md
+      - Testing: operations/testing.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Research: research.md
+  - Roadmap: roadmap.md
