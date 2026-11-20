@@ -341,13 +341,17 @@ class Ingestor:
     return best if best_score >= 0.3 else None
 
   def _infer_edges(self, batch: dict, canon, warnings: list[str]) -> list[dict]:
-    providers: dict[str, list[str]] = defaultdict(list)    # output name -> procedures
+    # output name -> procedures that produce it. Composites only pass their parts'
+    # outputs through, so they are never proposed as the producer.
+    providers: dict[str, list[str]] = defaultdict(list)
     for p in self.mem.kg.all():
-      for o in p.outputs:
-        providers[o].append(p.name)
+      if not self.mem.kg.parts(p.name) and (p.call or {}).get("kind") != "composite":
+        for o in p.outputs:
+          providers[o].append(p.name)
     for p in batch.values():
-      for o in p["outputs"]:
-        providers[o].append(p["name"])
+      if (p["call"] or {}).get("kind") != "composite":
+        for o in p["outputs"]:
+          providers[o].append(p["name"])
 
     edges: dict[tuple, dict] = {}
     for p in batch.values():
@@ -361,11 +365,14 @@ class Ingestor:
         mapping = {canon(kv["name"]): canon(kv["value"]) for kv in d["mapping"]}
         edges[(src, dst, etype)] = {"src": src, "dst": dst, "type": etype, "mapping": mapping,
                                     "signals": ["text"], "status": "confirmed"}
+      covered = {k for (s, _, _), e in edges.items() if s == src for k in e["mapping"]}
       for inp in p["inputs"]:   # signal 2: someone else produces this input
         for dst in providers.get(inp, []):
           if dst == src:
             continue
           key = (src, dst, "DEPENDS_ON")
+          if inp in covered and key not in edges:   # the text already says where it comes from
+            continue
           if key in edges:
             edges[key]["mapping"].setdefault(inp, inp)
             if "io" not in edges[key]["signals"]:

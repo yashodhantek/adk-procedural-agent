@@ -1,5 +1,7 @@
 # ADK Procedural Agent
 
+📖 **Documentation: https://yashodhantek.github.io/adk-procedural-agent/** (architecture, LLDs, capability guides, worked examples)
+
 A self-learning agent for real-time data, built on **Google ADK 2.x** (tested on `google-adk==2.15.0`).
 It turns a question into a plan over a **procedural memory knowledge graph**, fetches the data in
 parallel, checks its own answer, and learns from every run.
@@ -19,7 +21,7 @@ recall ─▶ planner* ─▶ compile_plan ─▶ execute_plan ─▶ synthesize
 ```bash
 pip install -e ".[dev,llms]"
 cp .env.example .env            # add GOOGLE_API_KEY (or Vertex settings)
-python -m pytest                # 30 offline tests: scripted models, LiteLLM mocks, mock APIs
+python -m pytest                # 31 offline tests: scripted models, LiteLLM mocks, mock APIs
 
 # Option 1: CLI with persistent memory
 python scripts/run_cli.py --user srini
@@ -241,9 +243,20 @@ procedural_agent/
   seed/               procedures.json, glossary.json
 synthesizer_lab/      GEPA optimisation target + eval set
 evals/                eval config, sampler/optimizer config, workflow eval set
-scripts/              run_cli.py, improve.py, ingest.py
+scripts/              run_cli.py, improve.py, ingest.py, generate_doc_examples.py
+docs/ + mkdocs.yml    documentation site (published to GitHub Pages by .github/workflows/docs.yml)
 examples/             sop_travel_cards.md (procedure + term cards)
 tests/                offline end-to-end and unit tests
+```
+
+## Documentation
+
+Published at https://yashodhantek.github.io/adk-procedural-agent/. To preview locally:
+
+```bash
+pip install -r requirements-docs.txt
+python scripts/generate_doc_examples.py   # refresh the worked examples from real runs
+mkdocs serve
 ```
 
 ## Notes

@@ -237,8 +237,10 @@ async def learn(ctx: Context, node_input) -> None:
     roots = sorted({s["procedure"] for s in compiled.get("steps", {}).values()
                     if s["procedure"] != "adhoc" and not s["id"].startswith(("auto_",))
                     and not mem.kg.parts(s["procedure"])})
-    executed_ok = [r for r in results.values() if r.get("ok")]
-    if success and len(roots) >= 2 and len(executed_ok) >= 2 and not _composite_exists(mem.kg, roots):
+    root_steps = [sid for sid, s in compiled.get("steps", {}).items() if s["procedure"] in roots]
+    all_roots_ok = all((results.get(sid) or {}).get("ok") for sid in root_steps)
+    # Only a run where every chosen procedure actually worked becomes a new procedure.
+    if success and all_roots_ok and len(roots) >= 2 and not _composite_exists(mem.kg, roots):
       spec = await distiller().induce_procedure(query, compiled, results, st.get("temp:draft", ""))
       name = safe_name(spec["name"])
       if mem.kg.get(name):

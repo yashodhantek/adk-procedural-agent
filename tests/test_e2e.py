@@ -38,8 +38,8 @@ PLAN = {
 QUESTION = "What's the weather and air quality in Hyderabad, and what is 100 USD in INR?"
 
 
-async def run_turn(llm: ScriptedLlm, session_id: str, text: str = QUESTION):
-  executor.fetcher.transport = mock_transport()
+async def run_turn(llm: ScriptedLlm, session_id: str, text: str = QUESTION, fail_hosts: tuple = ()):
+  executor.fetcher.transport = mock_transport(fail_hosts)
   wf = build_workflow(model=llm, planner_model=llm, critic_model=llm)
   app = App(name="procedural_agent", root_agent=wf, plugins=build_plugins())
   runner = Runner(app=app, session_service=SESSIONS, memory_service=MEMORY,
@@ -111,3 +111,16 @@ def test_replan_when_data_missing():
   assert [r for r, _ in llm.calls].count("planner") == 2
   assert "REVIEW FEEDBACK" in [t for r, t in llm.calls if r == "planner"][1]
   assert final
+
+
+def test_partial_failure_is_not_learned_as_a_procedure():
+  plan = {"intent": "air quality and fx", "domain": "x", "steps": [
+      {"id": "a", "procedure": "get_air_quality", "inputs": [{"name": "city", "value": "Pune"}]},
+      {"id": "b", "procedure": "get_fx_rate", "inputs": [{"name": "from_currency", "value": "GBP"},
+                                                          {"name": "to_currency", "value": "INR"}]}]}
+  llm = ScriptedLlm(plan=plan, critic_script=[{"ok": True, "score": 0.9, "issues": []}])
+  before = len(agent_memory().kg.all(include_deprecated=True))
+  _, session = asyncio.run(run_turn(llm, "s_partial", "AQI in Pune and GBP to INR?",
+                                    fail_hosts=("air-quality-api.open-meteo.com",)))
+  assert "induced" not in session.state["last_learning"]
+  assert len(agent_memory().kg.all(include_deprecated=True)) == before
