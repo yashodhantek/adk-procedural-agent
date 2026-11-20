@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "adk-procedural-agent"
 version = "0.1.0"
@@ -15,6 +19,13 @@ optimize = ["google-adk[eval]>=2.15,<3", "gepa"]
 vertex = ["google-adk[extensions]>=2.15,<3"]
 dev = ["pytest>=8", "litellm>=1.80"]
 
+[tool.setuptools.packages.find]
+include = ["procedural_agent", "procedural_agent.*"]
+
+[tool.setuptools.package-data]
+procedural_agent = ["prompts/*.md", "seed/*.json"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
