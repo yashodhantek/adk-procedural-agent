@@ -24,6 +24,15 @@ def _env_bool(name: str, default: bool) -> bool:
   return os.environ.get(name, str(default)).lower() in ("1", "true", "yes", "on")
 
 
+def _load_mcp_servers() -> list:
+  servers = json.loads(_env("MCP_SERVERS", "[]") or "[]")
+  path = Path(_env("MCP_SERVERS_FILE", "mcp_servers.json"))
+  if path.exists():
+    data = json.loads(path.read_text())
+    servers += data.get("servers", data) if isinstance(data, dict) else data
+  return servers
+
+
 @dataclass(frozen=True)
 class Settings:
   # --- Models (Gemini via google-genai; any LiteLlm string also works) -------
@@ -85,8 +94,14 @@ class Settings:
   plan_react_fallback: bool = field(default_factory=lambda: _env_bool("PLAN_REACT_FALLBACK", True))
   # Provider prompt caching hints (OpenAI/Azure prompt_cache_key, Anthropic cache_control).
   prompt_cache_hints: bool = field(default_factory=lambda: _env_bool("PROMPT_CACHE_HINTS", True))
-  # JSON list: [{"name": "crm", "url": "https://host/mcp", "headers": {...}}]
-  mcp_servers: list = field(default_factory=lambda: json.loads(_env("MCP_SERVERS", "[]")))
+  # MCP servers, from MCP_SERVERS (JSON) and/or MCP_SERVERS_FILE (a JSON file). Entries:
+  #   {"name": "crm", "url": "https://host/mcp", "headers": {...}}          (streamable HTTP)
+  #   {"name": "techintel", "command": "python", "args": [...], "env": {...}} (local stdio)
+  # "${VAR}" inside env, headers, args and url is expanded from the environment.
+  mcp_servers: list = field(default_factory=lambda: _load_mcp_servers())
+  # Model for `LLM:` procedure steps (summarise / classify / draft). Defaults to LEARNER_MODEL.
+  llm_step_model: str = field(default_factory=lambda: _env("LLM_STEP_MODEL", _env("LEARNER_MODEL", "gemini-3.5-flash")))
+  approval_ttl_hours: float = field(default_factory=lambda: _env_float("APPROVAL_TTL_HOURS", 24.0))
 
   @property
   def db_path(self) -> Path:

@@ -107,6 +107,8 @@ nav:
       - Prompt caching: capabilities/prompt-caching.md
       - Web search: capabilities/web-search.md
       - Tools & MCP: capabilities/tools-mcp.md
+      - MCP & LLM steps in procedures: capabilities/mcp-procedures.md
+      - Actions & approvals: capabilities/actions-approvals.md
       - Guardrails & safety: capabilities/guardrails.md
       - Observability & resumability: capabilities/observability.md
   - Examples:
@@ -121,6 +123,7 @@ nav:
       - 8. Learning a procedure over four turns: examples/learning.md
       - 9. Ingesting an SOP: examples/ingestion.md
       - 10. Mixing model providers: examples/providers.md
+      - 11. Signal brief through MCP (live): examples/signal.md
   - Reference:
       - reference/index.md
       - Procedure cards: reference/procedure-cards.md

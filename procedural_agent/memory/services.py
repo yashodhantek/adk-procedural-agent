@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from ..config import settings
+from .approvals import Approvals
 from .glossary import Glossary
 from .procedural_kg import ProceduralKG
 from .reflection import ReflectionMemory
@@ -31,13 +32,15 @@ class AgentMemory:
   facts: SemanticMemory
   reflections: ReflectionMemory
   glossary: Glossary
+  approvals: Approvals
 
 
 @lru_cache(maxsize=1)
 def agent_memory() -> AgentMemory:
   store = SqliteStore(settings.db_path)
   return AgentMemory(store=store, kg=ProceduralKG(store), facts=SemanticMemory(store),
-                     reflections=ReflectionMemory(store), glossary=Glossary(store))
+                     reflections=ReflectionMemory(store), glossary=Glossary(store),
+                     approvals=Approvals(store))
 
 
 def build_services():

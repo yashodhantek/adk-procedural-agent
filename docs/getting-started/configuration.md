@@ -83,7 +83,10 @@ Each value is a **model spec**, such as `azure/gpt-4o-prod`, `truefoundry/openai
 | `SEARCH_PROVIDER` | `auto` | `auto`, `gemini`, `tavily`, `exa`, `brave`, `openai` or `none` |
 | `TAVILY_API_KEY`, `EXA_API_KEY`, `BRAVE_API_KEY` | | Search provider keys |
 | `SEARCH_MAX_RESULTS` | `5` | Results returned by `web_search` |
-| `MCP_SERVERS` | `[]` | JSON list of `{"name", "url", "headers"}` for streamable-HTTP MCP servers |
+| `MCP_SERVERS` | `[]` | JSON list of servers: `{"name", "url", "headers"}` (HTTP) or `{"name", "command", "args", "env"}` (stdio); `${VAR}` is expanded |
+| `MCP_SERVERS_FILE` | `mcp_servers.json` | File with more server entries (`{"servers": [...]}`), git-ignored |
+| `LLM_STEP_MODEL` | `LEARNER_MODEL` | Model for `LLM:` procedure steps |
+| `APPROVAL_TTL_HOURS` | `24` | How long a parked write can be approved |
 
 ## Storage
 

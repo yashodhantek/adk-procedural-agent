@@ -35,6 +35,14 @@ outcome is recorded by `ToolLearningPlugin` as source `tool:<name>`.
 | `ingest_text` | `text, source_name` | `{ok, batch_id, review, edges_needing_confirmation}`; nothing is saved yet |
 | `apply_ingest` | `batch_id, approve_edges[]` (`["all"]` allowed) | Apply summary |
 
+## Approvals
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `approve_action` | `code` | Runs the parked call **only if the user's latest message contains the code** |
+| `reject_action` | `code` | Discards it |
+| `list_pending_actions` | — | This user's parked actions with previews |
+
 ## Data
 
 | Tool | Arguments | Returns |

@@ -1,0 +1,17 @@
+{
+  "servers": [
+    {
+      "name": "techintel",
+      "command": "python",
+      "args": ["packs/techintel/techintel_mcp.py"],
+      "env": {
+        "TECHINTEL_URL": "${TECHINTEL_URL}",
+        "TECHINTEL_EMAIL": "${TECHINTEL_EMAIL}",
+        "TECHINTEL_PASSWORD": "${TECHINTEL_PASSWORD}",
+        "TECHINTEL_TOKEN": "${TECHINTEL_TOKEN}",
+        "TECHINTEL_BRIEF_DIR": "${TECHINTEL_BRIEF_DIR}"
+      },
+      "timeout": 60
+    }
+  ]
+}

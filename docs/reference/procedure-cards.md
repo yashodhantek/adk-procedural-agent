@@ -17,6 +17,9 @@ API: GET https://host/path?param={a}&other=fixed
 Extract: x = json.path.0.field; y = items[*].name
 Required: x
 Compute: x = round(a * b, 2)            (instead of API, for a calculation)
+MCP: server.tool arg={a} other="text"    (instead of API: call an MCP tool)
+LLM: Summarise {a} and {x} in 3 bullets  (instead of API: a text step)
+Side effect: read | write | destructive  (write/destructive run only after approval)
 Sample: a=1; b=2                        (enables a live test call during ingestion)
 Steps:
 1. First step in plain words.
@@ -33,6 +36,9 @@ Steps:
 | `Extract` | with `API` | `output = path` pairs, using the [path language](../architecture/lld-executor.md#path-language-extract) |
 | `Required` | — | Outputs that must be non-empty for success |
 | `Compute` | — | `out = expression`, run in the safe evaluator |
+| `MCP` | — | `server.tool` plus `key=value` arguments (shell-style quoting); the server must be configured; read steps are test-called once during ingestion |
+| `LLM` | — | A prompt; `{var}` takes inputs **and** dependency outputs; the output name is the first `Outputs` entry |
+| `Side effect` | — | `write` / `destructive`: parked for [approval](../capabilities/actions-approvals.md); never test-called; never learned into composites |
 | `Sample` | — | `name=value` pairs; with full coverage of the placeholders, one live test call is made |
 | `Steps` | — | Lines after `Steps:` until the next heading; the synthesizer follows them when there's no call spec |
 

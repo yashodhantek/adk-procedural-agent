@@ -279,6 +279,27 @@ async def complete_json(spec: str, prompt: str, schema: type[BaseModel], tempera
   raise RuntimeError(f"All models failed for structured output: {last}")
 
 
+async def complete_text(spec: str, prompt: str, temperature: float = 0.3) -> str:
+  """Plain-text completion from any provider in the spec chain (with fallback)."""
+  last: Exception | None = None
+  for s in parse_chain(spec):
+    try:
+      if s.is_gemini:
+        from google import genai
+        from google.genai import types
+        resp = await genai.Client().aio.models.generate_content(
+            model=s.litellm_model, contents=prompt, config=types.GenerateContentConfig(temperature=temperature))
+        return resp.text or ""
+      import litellm
+      resp = await litellm.acompletion(model=s.litellm_model, messages=[{"role": "user", "content": prompt}],
+                                       temperature=temperature, **s.kwargs)
+      return resp.choices[0].message.content or ""
+    except Exception as e:  # noqa: BLE001
+      last = e
+      log.warning("complete_text via %s failed: %s", s.raw, e)
+  raise RuntimeError(f"All models failed for text completion: {last}")
+
+
 def _strip_fences(text: str) -> str:
   t = (text or "").strip()
   if t.startswith("```"):

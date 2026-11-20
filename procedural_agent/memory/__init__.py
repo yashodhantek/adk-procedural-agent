@@ -1,3 +1,4 @@
+from .approvals import Approvals
 from .glossary import Glossary
 from .procedural_kg import Procedure, ProceduralKG
 from .reflection import ReflectionMemory

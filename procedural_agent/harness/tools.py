@@ -144,15 +144,16 @@ def skill_toolset() -> SkillToolset:
 
 
 def mcp_toolsets() -> list[Any]:
+  """One McpToolset per configured server (local stdio or remote streamable HTTP)."""
+  from .mcp_client import connection_params
   sets = []
   for server in settings.mcp_servers:
     try:
-      from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
-      sets.append(McpToolset(
-          connection_params=StreamableHTTPConnectionParams(url=server["url"], headers=server.get("headers", {})),
-          tool_name_prefix=server.get("name"), tool_list_cache_ttl_seconds=300))
+      from google.adk.tools.mcp_tool import McpToolset
+      sets.append(McpToolset(connection_params=connection_params(server),
+                             tool_name_prefix=server.get("name"), tool_list_cache_ttl_seconds=300))
     except Exception as e:  # noqa: BLE001
-      log.warning("Skipping MCP server %s: %s", server, e)
+      log.warning("Skipping MCP server %s: %s", server.get("name"), e)
   return sets
 
 
@@ -161,6 +162,7 @@ def synthesizer_tools() -> list[Any]:
       run_procedure, find_procedures, teach_procedure,
       remember_fact, recall_facts, forget_fact,
       define_term, lookup_term, ingest_text, apply_ingest,
+      approve_action, reject_action, list_pending_actions,
       http_get_json, load_web_page,
       load_memory,             # episodic recall on demand (ADK memory service)
       skill_toolset(),         # procedures as Agent Skills (progressive disclosure)
@@ -233,3 +235,44 @@ def apply_ingest(batch_id: str, approve_edges: list[str]) -> dict:
     return {"ok": True, **Ingestor(agent_memory()).apply(batch_id, "all" if approve_edges == ["all"] else approve_edges)}
   except (KeyError, ValueError) as e:
     return {"ok": False, "error": str(e)}
+
+
+# ---------------------------------------------------------- approvals
+def _user_said(tool_context: ToolContext, code: str) -> bool:
+  content = getattr(tool_context, "user_content", None)
+  text = " ".join(p.text or "" for p in (getattr(content, "parts", None) or []))
+  return code.upper() in text.upper()
+
+
+async def approve_action(code: str, tool_context: ToolContext) -> dict:
+  """Execute a parked write/destructive step. Only when the user's latest message contains this code.
+
+  Args:
+    code: The 6-character approval code shown to the user.
+  """
+  if not _user_said(tool_context, code):
+    return {"ok": False, "error": "Not approved: the user's message must contain the code itself. Ask the user."}
+  from .executor import execute_approved
+  try:
+    return await execute_approved(code, tool_context.user_id)
+  except (KeyError, ValueError, PermissionError) as e:
+    return {"ok": False, "error": str(e)}
+
+
+def reject_action(code: str, tool_context: ToolContext) -> dict:
+  """Discard a parked action the user declined.
+
+  Args:
+    code: The approval code.
+  """
+  a = agent_memory().approvals.get(code)
+  if not a or a["status"] != "pending":
+    return {"ok": False, "error": "No pending action with that code"}
+  agent_memory().approvals.decide(code, "rejected")
+  return {"ok": True, "rejected": code}
+
+
+def list_pending_actions(tool_context: ToolContext) -> dict:
+  """List actions waiting for this user's approval."""
+  return {"pending": [{"code": a["code"], "procedure": a["procedure"], "side_effect": a["side_effect"],
+                       "preview": a["summary"]} for a in agent_memory().approvals.pending(tool_context.user_id)]}

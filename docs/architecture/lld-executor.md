@@ -42,6 +42,7 @@ Latency is the sum over levels of the slowest step in each level, not the sum of
 | `failed` | HTTP error after retries, missing input, empty required output, bad expression | yes (failure) |
 | `skipped` | A step it depends on did not succeed | no |
 | `deferred` | `adhoc`, or a procedure with written steps but no call spec; the synthesizer handles it | at turn end, by the outcome |
+| `pending_approval` | A `write`/`destructive` step: the rendered call is parked under an approval code | when executed after approval |
 
 ## Input binding
 
@@ -78,6 +79,27 @@ For each step, the variables are:
     A **safe evaluator** (an AST whitelist) allows numbers, variables, `+ - * / % **`, unary minus,
     and `round min max abs float`. Anything else, such as attribute access, imports or calls to
     other functions, is rejected.
+
+=== "mcp_tool"
+
+    ```json
+    {"kind": "mcp_tool", "server": "techintel", "tool": "get_concept",
+     "args": {"slug": "{slug}"}, "extract": {"concept": "."}, "required": ["concept"]}
+    ```
+
+    Called through a pooled ADK `MCPSessionManager` session per server (stdio or streamable
+    HTTP). The result is structured content if present, else JSON-parsed text. A tool error fails
+    the step. Recorded as source `mcp:<server>`.
+
+=== "llm"
+
+    ```json
+    {"kind": "llm", "prompt": "Summarise {rising} and {concept} ...", "output": "brief_md"}
+    ```
+
+    `{var}` takes inputs and dependency outputs (dicts and lists as compact JSON); `{upstream}`
+    is all dependency outputs. Runs on `LLM_STEP_MODEL` via `llm.complete_text` (any provider,
+    with fallback).
 
 === "composite"
 

@@ -21,5 +21,7 @@ example.
 | | [Prompt caching](prompt-caching.md) | Stable prefixes and provider cache hints |
 | **Tools & operations** | [Web search](web-search.md) | Google, Tavily, Exa, Brave or OpenAI behind one tool |
 | | [Tools & MCP](tools-mcp.md) | Built-in tools, skills and any MCP server |
+| | [MCP & LLM steps in procedures](mcp-procedures.md) | Any MCP tool or LLM prompt as a graph step: parallel, measured, learnable |
+| | [Actions & approvals](actions-approvals.md) | Write steps are parked with an exact preview until you approve |
 | | [Guardrails & safety](guardrails.md) | Allowlists, safe evaluation, budgets, staged writes |
 | | [Observability & resumability](observability.md) | Logs, traces, reports, resumable runs |
