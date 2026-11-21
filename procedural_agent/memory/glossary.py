@@ -128,11 +128,14 @@ class Glossary:
         return rows[0]["canonical"]
     return re.sub(r"[^a-z0-9_]+", "_", key).strip("_")
 
-  def normalize_value(self, param: str, value):
-    """'rupees' for to_currency -> 'INR'; applies the parameter's format."""
+  def normalize_value(self, param: str, value, exact: bool = False):
+    """'rupees' for to_currency -> 'INR'; applies the parameter's format.
+
+    exact=True: `param` is a name the procedure declares itself, so it is not
+    resolved through aliases (an email 'to' is not the currency 'to')."""
     if not isinstance(value, str):
       return value
-    param = self.canonical_param(param)
+    param = safe if exact and (safe := re.sub(r"[^a-z0-9_]+", "_", _norm(param)).strip("_")) else self.canonical_param(param)
     out = value
     for r in self.db.query("SELECT canonical FROM term_aliases WHERE alias=? AND kind='value'", (_norm(value),)):
       term = self.get(r["canonical"], "value")

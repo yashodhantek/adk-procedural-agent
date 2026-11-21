@@ -117,3 +117,28 @@ def test_mail_server_rejects_bad_recipients():
   assert mail_mcp.recipients("a@b.co; c@d.io") == ["a@b.co", "c@d.io"]
   with pytest.raises(ValueError):
     mail_mcp.recipients("not-an-address")
+
+
+def test_email_to_is_not_the_currency_to(mail_server):
+  """Regression: the glossary alias to -> to_currency must not rename or upper-case an email recipient."""
+  from procedural_agent.harness.ingest import Ingestor
+  from procedural_agent.harness.nodes import normalize_plan
+  mem = agent_memory()
+  card = ("## Procedure: email_digest\nDescription: email a digest\nInputs: body, to\nOutputs: sent\n"
+          "MCP: mail.send_email to={to} subject=\"Digest\" markdown={body}\nSide effect: write\n")
+  ing = Ingestor(mem)
+  report = asyncio.run(ing.stage(card))
+  asyncio.run(mcp_client.registry().close())
+  ing.apply(report["batch_id"], approve="all")
+  name = report["procedures"][0]["name"]          # may be merged into the similar email_note
+  proc = mem.kg.get(name)
+  assert proc and "to" in proc.inputs and "to_currency" not in proc.inputs
+  assert "{to}" in json.dumps(proc.call)
+  plan, _ = normalize_plan({"steps": [{"id": "main", "procedure": name,
+                                       "inputs": [{"name": "to", "value": "srini@yashodhantek.com"}]}]},
+                           mem.glossary, mem.kg)
+  assert plan["steps"][0]["inputs"][0] == {"name": "to", "value": "srini@yashodhantek.com"}
+  # currency procedures still canonicalise
+  plan, _ = normalize_plan({"steps": [{"id": "m", "procedure": "convert_amount",
+                                       "inputs": [{"name": "to", "value": "rupees"}]}]}, mem.glossary, mem.kg)
+  assert plan["steps"][0]["inputs"][0] == {"name": "to_currency", "value": "INR"}

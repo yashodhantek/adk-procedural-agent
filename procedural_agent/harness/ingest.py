@@ -272,14 +272,20 @@ class Ingestor:
     procs: dict[str, dict] = {}
     for d in ex.procedures:
       name = safe_name(d.name)
+      # MCP and LLM steps name their placeholders explicitly ({to}, {brief_md}); those names are
+      # the tool's own arguments, so a glossary alias (to -> to_currency) must not rewrite them.
+      literal = set(re.findall(r"\{(\w+)\}", d.call.model_dump_json())) if d.call and (d.call.mcp or d.call.prompt) else set()
+
+      def canon_io(n: str, _lit=literal) -> str:
+        return safe_name(n) if safe_name(n) in _lit else canon(n)
       rename = {}
       for io in d.inputs + d.outputs:
-        c = canon(io)
+        c = canon_io(io)
         if c != io:
           rename[io] = c
-      inputs = list(dict.fromkeys(canon(i) for i in d.inputs))
-      outputs = list(dict.fromkeys(canon(o) for o in d.outputs))
-      call = self._call_spec(d.call, rename, outputs=[canon(o) for o in d.outputs])
+      inputs = list(dict.fromkeys(canon_io(i) for i in d.inputs))
+      outputs = list(dict.fromkeys(canon_io(o) for o in d.outputs))
+      call = self._call_spec(d.call, rename, outputs=[canon_io(o) for o in d.outputs])
       if call is None and any(x.relation == "made_of" for x in d.depends_on):
         call = {"kind": "composite"}
       action, target = self._dedupe(name, d.description, inputs, outputs)

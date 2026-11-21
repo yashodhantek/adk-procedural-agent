@@ -34,6 +34,16 @@ from procedural_agent.memory import agent_memory  # noqa: E402
 
 async def main(a) -> int:
   mem = agent_memory()
+  proc = mem.kg.get(a.procedure)
+  if proc is None:
+    print(f"Procedure '{a.procedure}' is not in the agent's graph.\n"
+          f"Ingest its card first, e.g.: python scripts/ingest.py packs/techintel/procedures.md --apply",
+          file=sys.stderr)
+    return 2
+  if not proc.call:
+    print(f"Procedure '{a.procedure}' has no executable call (written steps only). If its card uses MCP:, "
+          f"check the server is in mcp_servers.json, then re-ingest the card.", file=sys.stderr)
+    return 2
   inputs = [{"name": k, "value": v} for k, _, v in (p.partition("=") for p in a.inputs)]
   plan, notes = normalize_plan({"steps": [{"id": "main", "procedure": a.procedure, "inputs": inputs}]},
                                mem.glossary, mem.kg)

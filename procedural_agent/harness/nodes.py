@@ -124,7 +124,9 @@ def normalize_plan(plan: dict, glossary, kg=None) -> tuple[dict, list[str]]:
     declared = set(proc.inputs) if proc else set()
     for item in step.get("inputs", []):
       name = item["name"] if item["name"] in declared else glossary.canonical_param(item["name"])
-      value = glossary.normalize_value(name, item["value"])
+      if declared and name not in declared:   # the alias points at a parameter this procedure lacks
+        name = item["name"]
+      value = glossary.normalize_value(name, item["value"], exact=name in declared)
       if (name, value) != (item["name"], item["value"]):
         notes.append(f"{step['id']}: {item['name']}={item['value']!r} -> {name}={value!r}")
       item["name"], item["value"] = name, value
