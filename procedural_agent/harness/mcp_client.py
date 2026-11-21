@@ -38,9 +38,12 @@ def connection_params(server: dict):
   from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams, StreamableHTTPConnectionParams
   server = expand(server)
   if server.get("command"):
+    import sys
     from mcp import StdioServerParameters
+    # "python" means the interpreter running the agent (its venv), also under cron/systemd.
+    command = sys.executable if server["command"] in ("python", "python3") else server["command"]
     return StdioConnectionParams(
-        server_params=StdioServerParameters(command=server["command"], args=server.get("args", []),
+        server_params=StdioServerParameters(command=command, args=server.get("args", []),
                                             env={**os.environ, **server.get("env", {})},
                                             cwd=server.get("cwd")),
         timeout=float(server.get("timeout", 30)))

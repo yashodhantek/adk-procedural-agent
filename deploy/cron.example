@@ -1,0 +1,2 @@
+# Alternative to the systemd timer. crontab -e (times are in the server's timezone; 02:30 UTC = 08:00 IST)
+30 2 * * * cd /root/adk-procedural-agent && .venv/bin/python scripts/run_procedure.py techintel_email_brief to=srini@yashodhantek.com --user srini >> .data/brief.log 2>&1

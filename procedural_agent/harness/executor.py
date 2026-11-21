@@ -190,10 +190,26 @@ async def run_step(kg: ProceduralKG, step: dict, results: dict[str, dict], conte
       # Never run a write during planning: render the exact call and park it for a human yes.
       rendered = render_call(call, variables)
       from ..memory import agent_memory
+      from .policy import match as policy_match
+      approvals = agent_memory().approvals
       summary = describe_call(proc_name, rendered)
-      code = agent_memory().approvals.create(proc_name, side_effect, rendered, summary,
-                                             user_id=(context or {}).get("user_id"),
-                                             session_id=(context or {}).get("session_id"))
+      user_id = (context or {}).get("user_id")
+      code = approvals.create(proc_name, side_effect, rendered, summary, user_id=user_id,
+                              session_id=(context or {}).get("session_id"))
+      rule = None if (context or {}).get("no_standing_approvals") else policy_match(
+          proc_name, side_effect, rendered, user_id)
+      if rule:
+        # Pre-approved by an operator rule: run the exact rendered call now, and log it.
+        approved_by = f"standing approval #{rule['_index']}" + (f" ({rule['note']})" if rule.get("note") else "")
+        try:
+          outputs = await execute_call(rendered, {}, [])
+        except Exception as e:  # noqa: BLE001
+          approvals.decide(code, "failed", {"approved_by": approved_by, "error": str(e)})
+          raise
+        approvals.decide(code, "executed", {"approved_by": approved_by, "outputs": outputs})
+        out.update(ok=True, status="ok", outputs={**outputs, "approved_by": approved_by, "approval_code": code})
+        out["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        return out
       out.update(status="pending_approval", error=None,
                  outputs={"approval_code": code, "side_effect": side_effect, "preview": summary})
       out["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
@@ -315,7 +331,7 @@ async def execute_approved(code: str, user_id: str | None = None) -> dict:
     mem.approvals.decide(code, "failed", {"error": str(e)})
     mem.kg.record_outcome(action["procedure"], False, (time.perf_counter() - started) * 1000)
     return {"ok": False, "code": code, "procedure": action["procedure"], "error": f"{type(e).__name__}: {e}"}
-  mem.approvals.decide(code, "executed", outputs)
+  mem.approvals.decide(code, "executed", {"approved_by": "user", "outputs": outputs})
   mem.kg.record_outcome(action["procedure"], True, (time.perf_counter() - started) * 1000)
   return {"ok": True, "code": code, "procedure": action["procedure"], "outputs": compact(outputs)}
 

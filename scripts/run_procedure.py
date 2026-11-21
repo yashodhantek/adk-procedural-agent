@@ -6,7 +6,9 @@
   python scripts/approve.py CODE --user srini                          # then approve it
 
 Useful for cron / launchd schedules and for validating MCP-backed procedures.
-Writes are never executed here: they are parked for approval like in chat.
+Writes are parked for approval like in chat, unless an operator rule in
+approvals_policy.json pre-approves that exact procedure and its arguments
+(--dry-run ignores those rules, so nothing is ever sent).
 """
 
 from __future__ import annotations
@@ -37,7 +39,8 @@ async def main(a) -> int:
                                mem.glossary, mem.kg)
   compiled = mem.kg.compile(plan)
   try:
-    results = await run_plan(mem.kg, compiled, context={"user_id": a.user, "session_id": "cli"})
+    results = await run_plan(mem.kg, compiled, context={"user_id": a.user, "session_id": "cli",
+                                                        "no_standing_approvals": a.dry_run})
   finally:
     await registry().close()
   if a.json:
@@ -53,6 +56,8 @@ async def main(a) -> int:
     if main.get("status") == "pending_approval":
       print(f"\nWaiting for approval: {main['outputs']['preview']}\n"
             f"Approve with: python scripts/approve.py {main['outputs']['approval_code']} --user {a.user}")
+    elif main.get("ok") and main["outputs"].get("approved_by"):
+      print(f"\nExecuted under {main['outputs']['approved_by']} (logged as {main['outputs']['approval_code']}).")
     elif main.get("ok") and len(main["outputs"]) == 1 and isinstance(next(iter(main["outputs"].values())), str):
       print("\n" + next(iter(main["outputs"].values())))
   return 0 if results.get("main", {}).get("status") in ("ok", "pending_approval") else 1
@@ -64,4 +69,6 @@ if __name__ == "__main__":
   ap.add_argument("inputs", nargs="*", help="name=value")
   ap.add_argument("--user", default="local-user")
   ap.add_argument("--json", action="store_true")
+  ap.add_argument("--dry-run", action="store_true",
+                  help="ignore standing approvals: writes are parked and previewed, never executed")
   sys.exit(asyncio.run(main(ap.parse_args())))

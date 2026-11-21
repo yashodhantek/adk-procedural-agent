@@ -91,3 +91,12 @@ Outputs: saved
 Needs: techintel_brief (brief_md->brief_md)
 MCP: techintel.save_brief markdown={brief_md} title="Signal brief"
 Side effect: write
+
+## Procedure: techintel_email_brief
+Description: Email today's Signal brief. Used by the daily schedule; unattended runs need a standing approval for the exact recipients.
+Domain: techintel
+Inputs: brief_md, to
+Outputs: sent
+Needs: techintel_brief (brief_md->brief_md)
+MCP: mail.send_email to={to} subject="Signal brief" markdown={brief_md}
+Side effect: write

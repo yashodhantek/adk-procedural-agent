@@ -87,6 +87,12 @@ Each value is a **model spec**, such as `azure/gpt-4o-prod`, `truefoundry/openai
 | `MCP_SERVERS_FILE` | `mcp_servers.json` | File with more server entries (`{"servers": [...]}`), git-ignored |
 | `LLM_STEP_MODEL` | `LEARNER_MODEL` | Model for `LLM:` procedure steps |
 | `APPROVAL_TTL_HOURS` | `24` | How long a parked write can be approved |
+| `APPROVALS_POLICY_FILE` | `approvals_policy.json` | Standing approvals for unattended writes ([scheduling](../operations/scheduling.md)) |
+| `MAIL_PROVIDER` | `auto` | Mail MCP server: `graph`, `smtp` or `auto` (Graph when `MS_*` are set) |
+| `MAIL_FROM` | | Sender mailbox (Graph sends as this user) |
+| `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` | | Entra app with Mail.Send application permission |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | `587` | SMTP with STARTTLS |
+| `MAIL_DRY_RUN`, `MAIL_OUTBOX_DIR` | off, `.data/outbox` | Write emails to disk instead of sending |
 
 ## Storage
 

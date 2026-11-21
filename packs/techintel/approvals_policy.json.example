@@ -1,0 +1,9 @@
+[
+  {
+    "procedure": "techintel_email_brief",
+    "args": {"to": ["srini@yashodhantek.com"]},
+    "users": ["srini"],
+    "until": "2027-05-21",
+    "note": "daily Signal brief to myself"
+  }
+]

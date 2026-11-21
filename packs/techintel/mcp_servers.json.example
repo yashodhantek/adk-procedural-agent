@@ -3,13 +3,36 @@
     {
       "name": "techintel",
       "command": "python",
-      "args": ["packs/techintel/techintel_mcp.py"],
+      "args": [
+        "packs/techintel/techintel_mcp.py"
+      ],
       "env": {
         "TECHINTEL_URL": "${TECHINTEL_URL}",
         "TECHINTEL_EMAIL": "${TECHINTEL_EMAIL}",
         "TECHINTEL_PASSWORD": "${TECHINTEL_PASSWORD}",
         "TECHINTEL_TOKEN": "${TECHINTEL_TOKEN}",
         "TECHINTEL_BRIEF_DIR": "${TECHINTEL_BRIEF_DIR}"
+      },
+      "timeout": 60
+    },
+    {
+      "name": "mail",
+      "command": "python",
+      "args": [
+        "packs/mail/mail_mcp.py"
+      ],
+      "env": {
+        "MAIL_PROVIDER": "${MAIL_PROVIDER}",
+        "MAIL_FROM": "${MAIL_FROM}",
+        "MS_TENANT_ID": "${MS_TENANT_ID}",
+        "MS_CLIENT_ID": "${MS_CLIENT_ID}",
+        "MS_CLIENT_SECRET": "${MS_CLIENT_SECRET}",
+        "SMTP_HOST": "${SMTP_HOST}",
+        "SMTP_PORT": "${SMTP_PORT}",
+        "SMTP_USER": "${SMTP_USER}",
+        "SMTP_PASS": "${SMTP_PASS}",
+        "MAIL_DRY_RUN": "${MAIL_DRY_RUN}",
+        "MAIL_OUTBOX_DIR": "${MAIL_OUTBOX_DIR}"
       },
       "timeout": 60
     }

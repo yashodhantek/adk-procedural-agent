@@ -102,6 +102,8 @@ class Settings:
   # Model for `LLM:` procedure steps (summarise / classify / draft). Defaults to LEARNER_MODEL.
   llm_step_model: str = field(default_factory=lambda: _env("LLM_STEP_MODEL", _env("LEARNER_MODEL", "gemini-3.5-flash")))
   approval_ttl_hours: float = field(default_factory=lambda: _env_float("APPROVAL_TTL_HOURS", 24.0))
+  # Operator-written standing approvals for unattended writes (see harness/policy.py).
+  approvals_policy_file: str = field(default_factory=lambda: _env("APPROVALS_POLICY_FILE", "approvals_policy.json"))
 
   @property
   def db_path(self) -> Path:

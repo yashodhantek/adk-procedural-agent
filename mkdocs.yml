@@ -137,6 +137,7 @@ nav:
       - operations/index.md
       - Deployment: operations/deployment.md
       - Evaluation & optimisation: operations/evaluation.md
+      - Scheduling & notifications: operations/scheduling.md
       - Testing: operations/testing.md
       - Troubleshooting: operations/troubleshooting.md
   - Research: research.md

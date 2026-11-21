@@ -4,3 +4,4 @@ __pycache__/
 .pytest_cache/
 site/
 mcp_servers.json
+approvals_policy.json

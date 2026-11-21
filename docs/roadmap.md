@@ -8,7 +8,8 @@
 | `LLM:` steps | Summarise / classify / draft inside a procedure | **done** |
 | `side_effect: write` + approval gate | Writes never run without a user yes, exactly as previewed | **done** |
 | Signal (techintel) MCP server + pack | Live AI-technology intelligence briefs | **done** |
-| `Schedule:` field + runner | Run procedures on a timetable (today: cron + `run_procedure.py`) | planned |
+| Scheduled runs + email delivery | Mail MCP server, standing approvals, systemd timer ([guide](operations/scheduling.md)) | **done** |
+| `Schedule:` field in cards | Declare the timetable in the procedure itself instead of a timer file | planned |
 | Jira pack | ~10 procedures (search, my work, sprint status, blockers, create with confirmation…) + glossary + tests | planned |
 | Embedding search (hybrid with FTS5) | Better recall for paraphrased questions on large graphs | proposed |
 | Postgres `SqliteStore` port | Several replicas, one shared agent memory | proposed |

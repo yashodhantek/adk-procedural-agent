@@ -58,3 +58,11 @@ sequenceDiagram
 
 All of this is covered offline by `tests/test_mcp_procedures.py`, using a real local stdio MCP
 server.
+
+## Standing approvals (unattended runs)
+
+A scheduled run has nobody to type a code. The operator can pre-approve one write procedure with
+fixed argument values in `approvals_policy.json` (path: `APPROVALS_POLICY_FILE`). Matching steps
+run immediately and are logged as `executed` with `approved_by: "standing approval #N"`; anything
+outside the rule's bounds is parked as usual, and `destructive` steps never match. Rules need an
+`until` date. See [Scheduling & notifications](../operations/scheduling.md).

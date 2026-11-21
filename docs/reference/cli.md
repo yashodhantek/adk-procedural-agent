@@ -19,7 +19,13 @@ python scripts/run_procedure.py get_weather_forecast city=Hyderabad --json
 ```
 
 Compiles the procedure with its dependencies and runs it with no chat loop, which suits cron or
-launchd. Write steps are parked and their approval code is printed.
+launchd. Write steps are parked and their approval code is printed, unless a
+[standing approval](../operations/scheduling.md#standing-approvals) covers them. `--dry-run`
+ignores standing approvals so every write is parked.
+
+```bash
+python scripts/run_procedure.py techintel_email_brief to=srini@yashodhantek.com --user srini --dry-run
+```
 
 ## `scripts/approve.py`: decide on parked actions
 

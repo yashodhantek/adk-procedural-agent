@@ -1,0 +1,16 @@
+# Runs the Signal brief once and emails it. Triggered by signal-brief.timer.
+# Install:
+#   sudo cp deploy/systemd/signal-brief.* /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now signal-brief.timer
+[Unit]
+Description=Daily Signal (techintel) brief by email
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/adk-procedural-agent
+# .env, mcp_servers.json and approvals_policy.json are read from WorkingDirectory.
+ExecStart=/root/adk-procedural-agent/.venv/bin/python scripts/run_procedure.py techintel_email_brief to=srini@yashodhantek.com --user srini
+TimeoutStartSec=15min
+# Logs: journalctl -u signal-brief.service

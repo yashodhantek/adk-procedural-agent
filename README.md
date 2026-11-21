@@ -263,6 +263,18 @@ python scripts/run_procedure.py techintel_brief --user srini
 python scripts/approve.py --list
 ```
 
+### Daily email
+
+`techintel_email_brief` emails the brief through the mail MCP server (Microsoft Graph or SMTP).
+A standing approval in `approvals_policy.json` lets the 08:00 IST systemd timer send it unattended,
+to the listed recipients only. See *Operations → Scheduling & notifications*.
+
+```bash
+cp packs/techintel/approvals_policy.json.example approvals_policy.json
+python scripts/run_procedure.py techintel_email_brief to=srini@yashodhantek.com --user srini --dry-run
+sudo cp deploy/systemd/signal-brief.* /etc/systemd/system/ && sudo systemctl enable --now signal-brief.timer
+```
+
 ## Documentation
 
 Published at https://yashodhantek.github.io/adk-procedural-agent/. To preview locally:
