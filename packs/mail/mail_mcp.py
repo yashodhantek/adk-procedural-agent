@@ -5,7 +5,7 @@ Providers (MAIL_PROVIDER = auto | graph | smtp):
          MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET, MAIL_FROM (the sending mailbox).
          The app registration needs the Mail.Send *application* permission, the same
          setup the Signal (techintel) platform uses, so its values can be reused.
-  smtp   SMTP_HOST, SMTP_PORT (587, STARTTLS), SMTP_USER, SMTP_PASS, MAIL_FROM.
+  smtp   SMTP_HOST, SMTP_PORT (587, STARTTLS), SMTP_USER, SMTP_PASSWORD, MAIL_FROM.
   auto   graph if its variables are set, otherwise smtp.
 
 MAIL_DRY_RUN=1 writes the message to MAIL_OUTBOX_DIR (default ./.data/outbox) instead
@@ -98,7 +98,7 @@ def _send_smtp(sender: str, to: list[str], cc: list[str], subject: str, text: st
   with smtplib.SMTP(host, port, timeout=30) as s:
     s.starttls(context=ssl.create_default_context())
     if os.environ.get("SMTP_USER"):
-      s.login(os.environ["SMTP_USER"], os.environ.get("SMTP_PASS", ""))
+      s.login(os.environ["SMTP_USER"], os.environ.get("SMTP_PASSWORD") or os.environ.get("SMTP_PASS", ""))
     s.send_message(msg)
   return {"provider": "smtp"}
 
